@@ -1,0 +1,41 @@
+{
+  "date": "2026-11-08",
+  "packages": {
+    "strands-agents": "1.64.0",
+    "boto3": "1.43.126",
+    "ollama": "0.6.3",
+    "fastapi": "0.162.2",
+    "pydantic": "2.14.3"
+  },
+  "images": {
+    "floci/floci:latest": [
+      "floci/floci@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c"
+    ],
+    "ollama/ollama:latest": [
+      "ollama/ollama@sha256:0e59999e0e8f9fd4e704bd788a89b7e4cad399367fb1365f8c102ac662288761"
+    ],
+    "python:3.13-slim": [
+      "python@sha256:2d44738ebf4ce5f63b9d9ea871e9c7cfdc0426f7b0c97cac915fd88ded1d86bb"
+    ],
+    "strands-agentcore-local-agent": []
+  },
+  "models": [
+    {
+      "name": "qwen2.5:7b",
+      "digest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e"
+    },
+    {
+      "name": "qwen2.5:3b",
+      "digest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b"
+    }
+  ],
+  "reference_notes": {
+    "single-inc001.json": "3b, baseline, avant ajout du compteur tokens",
+    "multi-inc002-rejected.json": "3b, baseline, refus de citation non observée",
+    "offline-http-3b.json": "3b, baseline, réseau Docker interne, erreur de sortie structurée",
+    "single-inc001-7b.json": "7b, baseline, sortie valide mais erreur sémantique sur la précision",
+    "single-inc001-hardened-7b.json": "7b, hardened, sortie valide, à évaluer avec le barème humain",
+    "multi-inc002-hardened-7b.json": "7b, hardened, sortie valide; hypothèse acquisition encore mal étayée face à E-201 stable; aucune supériorité du multi-agent démontrée"
+  },
+  "prompt_hardened_sha256": "a5a03d19205797a3a335470caecbf78b74a036ead0f2bfb6291735171ff376b5"
+}

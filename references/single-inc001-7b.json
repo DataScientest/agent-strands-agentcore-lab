@@ -1,0 +1,85 @@
+{
+  "ok": true,
+  "report": {
+    "incident_id": "INC-001",
+    "status": "hypothesis",
+    "findings": [
+      {
+        "hypothesis": "La baisse du taux de prédiction correcte pourrait être due à une diminution de la qualité des images en entrée, probablement liée au changement de caméra.",
+        "evidence_ids": [
+          "E-101"
+        ],
+        "limitation": "Les étiquettes récentes sont manquantes, ce qui limite notre capacité à évaluer directement l'impact sur la précision du modèle."
+      }
+    ],
+    "unknowns": [
+      "La performance réelle du modèle sur les nouvelles images après 09:00 UTC"
+    ],
+    "proposed_action": "Rechercher des étiquettes validées pour les nouvelles images postérieures à 09:00 UTC et surveiller le taux de rejets prédits.",
+    "requires_human_approval": true
+  },
+  "incident": "INC-001",
+  "mode": "single",
+  "model_calls": 5,
+  "tool_calls": 4,
+  "tokens": {
+    "inputTokens": 5086,
+    "outputTokens": 302,
+    "totalTokens": 5388
+  },
+  "latency_s": 92.935,
+  "trace": [
+    {
+      "tool": "get_incident",
+      "arguments": {},
+      "result": {
+        "incident_id": "INC-001",
+        "summary": "Le taux de rejets prédits double après 09:00 UTC.",
+        "evidence_ids": [
+          "E-101",
+          "E-102",
+          "E-103"
+        ]
+      }
+    },
+    {
+      "tool": "read_evidence",
+      "arguments": {
+        "evidence_id": "E-101"
+      },
+      "result": {
+        "id": "E-101",
+        "kind": "data",
+        "observed_at": "2026-10-01T09:10:00Z",
+        "source": "sensor_quality.csv",
+        "facts": "Part de luminosité hors plage : 4 % avant 09:00, 37 % après 09:00. 1000 images par fenêtre. Le changement de caméra est enregistré à 08:58 UTC."
+      }
+    },
+    {
+      "tool": "read_evidence",
+      "arguments": {
+        "evidence_id": "E-102"
+      },
+      "result": {
+        "id": "E-102",
+        "kind": "deployment",
+        "observed_at": "2026-10-01T09:12:00Z",
+        "source": "model_registry.json",
+        "facts": "Même empreinte de modèle et même configuration entre 08:00 et 10:00 UTC. Aucun déploiement sur cet intervalle."
+      }
+    },
+    {
+      "tool": "read_evidence",
+      "arguments": {
+        "evidence_id": "E-103"
+      },
+      "result": {
+        "id": "E-103",
+        "kind": "quality",
+        "observed_at": "2026-10-01T09:15:00Z",
+        "source": "labels.csv",
+        "facts": "Aucune nouvelle étiquette validée depuis 08:30 UTC. La qualité réelle du modèle sur les nouvelles images est inconnue."
+      }
+    }
+  ]
+}

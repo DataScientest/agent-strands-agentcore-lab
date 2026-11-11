@@ -1,0 +1,27 @@
+{
+  "runtime_id": "course_97a6be19-8t4FBwaToM",
+  "first_version": "1",
+  "second_version": "2",
+  "endpoint": "arn:aws:bedrock-agentcore:eu-west-3:000000000000:agentEndpoint/e1c6246e-cb0d-4efa-89f3-0df7de02b91a",
+  "versions": [
+    {
+      "agentRuntimeArn": "arn:aws:bedrock-agentcore:eu-west-3:000000000000:agent/f0a9f99a-cab7-43ab-b63b-4f2e4d8d7101:1",
+      "agentRuntimeId": "course_97a6be19-8t4FBwaToM",
+      "agentRuntimeVersion": "1",
+      "agentRuntimeName": "course_97a6be19",
+      "lastUpdatedAt": "2026-11-08 20:08:42+00:00",
+      "status": "READY"
+    },
+    {
+      "agentRuntimeArn": "arn:aws:bedrock-agentcore:eu-west-3:000000000000:agent/f0a9f99a-cab7-43ab-b63b-4f2e4d8d7101:2",
+      "agentRuntimeId": "course_97a6be19-8t4FBwaToM",
+      "agentRuntimeVersion": "2",
+      "agentRuntimeName": "course_97a6be19",
+      "description": "v2 locale",
+      "lastUpdatedAt": "2026-11-08 20:08:42+00:00",
+      "status": "READY"
+    }
+  ],
+  "simulated_invoke_body": "{\"output\":\"SIMULATION_FLOCI_NO_AGENT_EXECUTED\"}",
+  "agent_executed": false
+}

@@ -1,0 +1,37 @@
+name: strands-agentcore-local
+services:
+  floci:
+    image: floci/floci@sha256:5ee85db604c4aa74ac76e07ea5cc83086f37bb472bf3dbb97e34019e48efae9c
+    ports:
+      - "127.0.0.1:14566:4566"
+    environment:
+      FLOCI_SERVICES_BEDROCK_AGENT_CORE_VALIDATE_RUNTIME_EXISTS: "true"
+      FLOCI_SERVICES_BEDROCK_AGENT_CORE_INVOKE_RESPONSE: '{"output":"SIMULATION_FLOCI_NO_AGENT_EXECUTED"}'
+    networks: [lab]
+  ollama:  # seulement sans passerelle : docker compose --profile ollama up -d
+    profiles: [ollama]
+    image: ollama/ollama@sha256:0e59999e0e8f9fd4e704bd788a89b7e4cad399367fb1365f8c102ac662288761
+    environment:
+      OLLAMA_NO_CLOUD: "1"
+    ports:
+      - "127.0.0.1:11435:11434"
+    volumes:
+      - models:/root/.ollama
+    networks: [lab]
+  agent:
+    build: .
+    environment:
+      LLM_API_KEY: ${LLM_API_KEY:-}
+      LLM_BASE_URL: ${LLM_BASE_URL:-https://ai-gateway.liora.tech/v1}
+      LLM_MODEL: ${LLM_MODEL:-anthropic/claude-haiku-5-5}
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:3b}
+      AGENT_VARIANT: ${AGENT_VARIANT:-baseline}
+      OTEL_SDK_DISABLED: "true"
+    ports:
+      - "127.0.0.1:18080:8080"
+    networks: [lab]
+volumes:
+  models:
+networks:
+  lab:

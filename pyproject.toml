@@ -1,0 +1,12 @@
+[project]
+name = "strands-agentcore-local-lab"
+version = "0.1.0"
+requires-python = ">=3.12,<3.14"
+dependencies = ["strands-agents[ollama,openai]", "boto3", "fastapi", "uvicorn", "httpx", "pydantic"]
+
+[dependency-groups]
+dev = ["pytest"]
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

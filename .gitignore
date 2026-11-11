@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+.pytest_cache/
+runs/
+*.sqlite3
+.env
+
+premiere-enquete.json
+enquete-multi.json
+runs-premiere-enquete.json

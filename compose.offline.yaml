@@ -1,0 +1,4 @@
+# À ajouter uniquement après build, téléchargement des images et du modèle.
+networks:
+  lab:
+    internal: true
