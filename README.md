@@ -19,7 +19,7 @@ export LLM_BASE_URL=https://ai-gateway.liora.tech/v1      # valeur par défaut
 export LLM_MODEL=anthropic/claude-haiku-5-5               # valeur par défaut
 ```
 
-Une enquête prend alors quelques secondes. Sans `LLM_API_KEY`, l'agent prend un Ollama local (parcours Ollama, plus bas). Aucun repli de l'un vers l'autre : une passerelle injoignable donne une erreur, jamais un autre modèle. Ne mettez jamais la clé dans un fichier du lab.
+Une enquête prend alors quelques secondes. Sans `LLM_API_KEY`, l'agent prend un Ollama local (parcours Ollama, plus bas). Aucun repli de l'un vers l'autre : une passerelle injoignable donne une erreur, jamais un autre modèle. Ne versionnez jamais la clé : exportez-la, ou copiez `.env.example` en `.env`, que git ignore.
 
 Le modèle n'est pas garanti de réussir chaque incident ; les erreurs structurées et les traces font partie du TP. Les fichiers de `references/` conservent des enquêtes réelles faites avec `qwen2.5:3b` et `qwen2.5:7b`, dont des échecs : ils restent la base de plusieurs exercices.
 
@@ -27,8 +27,8 @@ Le modèle n'est pas garanti de réussir chaque incident ; les erreurs structur�
 
 ```bash
 uv sync --frozen
-uv run python runner.py INC-001 > premiere-enquete.json
-uv run python runner.py INC-002 --mode multi --timeout 360 > enquete-multi.json
+uv run lab-run INC-001 > premiere-enquete.json
+uv run lab-run INC-002 --mode multi --timeout 360 > enquete-multi.json
 uv run pytest -q
 ```
 
@@ -70,7 +70,7 @@ Pour un poste assez puissant, sans clé. Ne lancez pas deux inférences simultan
 ```bash
 unset LLM_API_KEY
 ollama pull qwen2.5:3b
-uv run python runner.py INC-001 > premiere-enquete.json
+uv run lab-run INC-001 > premiere-enquete.json
 ```
 
 Si nécessaire, démarrer `ollama serve` dans un autre terminal. `OLLAMA_HOST` vaut par défaut `http://127.0.0.1:11434` ; seul un hôte local est accepté, et un modèle relayé vers le cloud est refusé. `OLLAMA_MODEL` permet un autre modèle **local téléchargé et compatible outils**. La variante 3b de qwen2.5 possède une licence Qwen particulière ; vérifier les conditions d'utilisation pour l'organisation.
@@ -90,7 +90,7 @@ Changer de modèle, par la passerelle ou dans Ollama, exige de refaire les mesur
 Pour exposer l'application Python directement :
 
 ```bash
-uv run uvicorn server:app --host 127.0.0.1 --port 18080
+uv run uvicorn incident_lab.server:app --host 127.0.0.1 --port 18080
 ```
 
 Ne pas lancer cette commande si le conteneur agent utilise déjà le port 18080.
@@ -100,40 +100,49 @@ Ne pas lancer cette commande si le conteneur agent utilise déjà le port 18080.
 Avec Floci démarré :
 
 ```bash
-uv run python floci_lab.py
+uv run lab-floci
 ```
 
-Le client utilise exclusivement `http://127.0.0.1:14566` par défaut, région eu-west-3, identifiants factices `test`. `FLOCI_ENDPOINT` accepte seulement localhost, 127.0.0.1 ou le service Compose `floci`. En réseau interne, lancer `docker compose exec -T -e FLOCI_ENDPOINT=http://floci:4566 agent python floci_lab.py`. Le script enregistre deux versions, crée un endpoint, invoque la simulation puis nettoie ses propres ressources. Le marqueur `SIMULATION_FLOCI_NO_AGENT_EXECUTED` ne vient pas de Strands. L'URI ECR et le rôle IAM de l'exercice sont fictifs; aucun push d'image ou déploiement AWS n'a lieu.
+Le client utilise exclusivement `http://127.0.0.1:14566` par défaut, région eu-west-3, identifiants factices `test`. `FLOCI_ENDPOINT` accepte seulement localhost, 127.0.0.1 ou le service Compose `floci`. En réseau interne, lancer `docker compose exec -T -e FLOCI_ENDPOINT=http://floci:4566 agent lab-floci`. Le script enregistre deux versions, crée un endpoint, invoque la simulation puis nettoie ses propres ressources. Le marqueur `SIMULATION_FLOCI_NO_AGENT_EXECUTED` ne vient pas de Strands. L'URI ECR et le rôle IAM de l'exercice sont fictifs; aucun push d'image ou déploiement AWS n'a lieu.
 
 ## Approbation et évaluation
 
 ```bash
-uv run python actions.py
-uv run python evaluate.py --mode single --split dev --repeats 1
-uv run python evaluate.py --mode multi --split dev --repeats 1
+uv run lab-actions
+uv run lab-evaluate --mode single --split dev --repeats 1
+uv run lab-evaluate --mode multi --split dev --repeats 1
 ```
 
-`actions.py` manipule uniquement une proposition simulée en SQLite. L'approbation passe par le terminal de l'opérateur, jamais par les outils de l'agent. Une seconde exécution ne répète pas la transition locale.
+`lab-actions` manipule uniquement une proposition simulée en SQLite. L'approbation passe par le terminal de l'opérateur, jamais par les outils de l'agent. Une seconde exécution ne répète pas la transition locale.
 
 Les évaluations écrivent progressivement dans `runs/`. Pour le benchmark complet, utiliser trois répétitions ou davantage en dehors de la séance. Le script classe INC-003 dans `--split holdout`. S’il a déjà été étudié dans le parcours, ce jeu ne constitue plus une évaluation à l’aveugle : réserver de nouveaux incidents pour une mesure indépendante. Les mêmes budgets globaux s'appliquent aux deux architectures. Un timeout reste un échec; ne pas le retirer des résultats.
 
-`tokens` contient les compteurs disponibles du SDK ou `null`. Sur un échec, un comptage peut être partiel : ne pas l'interpréter comme une consommation complète. Les traces historiques antérieures à l'ajout du compteur n'ont pas cette clé. La qualité sémantique reste à annoter avec la grille du formateur; les contrôles de `evaluate.py` ne sont pas une mesure automatique de justesse métier.
+`tokens` contient les compteurs disponibles du SDK ou `null`. Sur un échec, un comptage peut être partiel : ne pas l'interpréter comme une consommation complète. Les traces historiques antérieures à l'ajout du compteur n'ont pas cette clé. La qualité sémantique reste à annoter avec la grille du formateur; les contrôles de `lab-evaluate` ne sont pas une mesure automatique de justesse métier.
 
-## Fichiers à lire
+## Organisation du code
 
-| Fichier | Responsabilité |
+Le lab est un paquet Python géré par uv (`pyproject.toml`, `uv.lock`). Le code vit dans `src/incident_lab/` ; les
+commandes sont déclarées dans `[project.scripts]`, et `uv run lab-…` les lance dans l'environnement du projet.
+
+| Chemin | Responsabilité |
 | --- | --- |
-| `incidents.json` | Corpus synthétique, INC-003 réservé au défi |
-| `domain.py` | Périmètres, preuves consultées, budgets et schémas |
-| `agent.py` | Prompt, outils, hook et workflow à deux spécialistes |
-| `models.py` | Modèle : passerelle de la formation si `LLM_API_KEY` est défini, sinon Ollama local |
-| `worker.py`, `runner.py` | Processus d'enquête et délai imposé par le parent |
-| `server.py` | Sous-ensemble HTTP AgentCore local |
-| `actions.py` | Proposition, approbation et exécution simulée idempotente |
-| `floci_lab.py` | Registre et invocation AgentCore simulés |
-| `evaluate.py`, `mesures.csv` | Résultats bruts et annotations humaines |
-| `tests/` | Tests sans modèle, limites et contrat HTTP |
-| `references/` | Sorties observées, y compris erreurs; aucune garantie de résultat |
+| `src/incident_lab/config.py` | Réglages lus dans l'environnement ou `.env` : `LLM_*`, `OLLAMA_*`, `AGENT_VARIANT`, `FLOCI_ENDPOINT` |
+| `src/incident_lab/contracts.py` | Contrats : `Report`, `Finding`, corps de `POST /invocations` |
+| `src/incident_lab/domain.py` | Périmètres, preuves consultées, budgets |
+| `src/incident_lab/agent.py` | Outils, hook de budget et workflow à deux spécialistes |
+| `src/incident_lab/prompts/` | Prompts système : `baseline.txt`, `hardened.txt` |
+| `src/incident_lab/models.py` | Modèle : passerelle de la formation si `LLM_API_KEY` est défini, sinon Ollama local |
+| `src/incident_lab/worker.py`, `runner.py` | Une enquête par processus (`lab-worker`), délai imposé par le parent (`lab-run`) |
+| `src/incident_lab/server.py` | Sous-ensemble HTTP AgentCore local (`lab-serve`) |
+| `src/incident_lab/actions.py` | Proposition, approbation et exécution simulée idempotente (`lab-actions`) |
+| `src/incident_lab/floci.py` | Registre et invocation AgentCore simulés (`lab-floci`) |
+| `src/incident_lab/evaluate.py` | Le même jeu rejoué et noté (`lab-evaluate`) |
+| `src/incident_lab/data/incidents.json` | Corpus synthétique, INC-003 réservé au défi |
+| `data/mesures.csv` | Grille d'annotation humaine des évaluations |
+| `tests/` | Tests sans modèle : limites, réglages et contrat HTTP |
+| `references/` | Sorties observées, y compris erreurs ; aucune garantie de résultat |
+
+Vérifier le code : `uv run pytest -q`, puis `uv run ruff check . && uv run ruff format --check .`.
 
 ## Dépannage
 
@@ -150,15 +159,15 @@ Les évaluations écrivent progressivement dans `runs/`. Pour le benchmark compl
 docker compose -f compose.yaml -f compose.offline.yaml down
 ```
 
-Cette commande conserve les poids dans le volume. Ne pas ajouter `-v` si tu souhaites conserver le téléchargement. Les sorties locales sont ignorées par git. Aucune ressource AWS n'est créée par le TP.
+Cette commande conserve les poids dans le volume. Ne pas ajouter `-v` si vous souhaitez conserver le téléchargement. Les sorties locales sont ignorées par git. Aucune ressource AWS n'est créée par le TP.
 
 ## Corrigé de l'amélioration du prompt
 
-`system_hardened.txt` fournit un exemple plus explicite sur les métriques et l'abstention. Le prompt initial reste la baseline du cours. Pour changer une seule variable :
+`src/incident_lab/prompts/hardened.txt` fournit un exemple plus explicite sur les métriques et l'abstention. Le prompt initial reste la baseline du cours. Pour changer une seule variable :
 
 ```bash
-AGENT_VARIANT=hardened uv run python runner.py INC-001
-AGENT_VARIANT=hardened uv run python evaluate.py --mode single --split dev --repeats 3
+AGENT_VARIANT=hardened uv run lab-run INC-001
+AGENT_VARIANT=hardened uv run lab-evaluate --mode single --split dev --repeats 3
 ```
 
 Les évaluations écrivent `runs/single-dev-baseline.json` ou `runs/single-dev-hardened.json`, selon la variante, afin de conserver les deux expériences. Les résultats dépendent du modèle : le corrigé est une hypothèse d'amélioration à évaluer, pas une garantie. La référence `single-inc001-7b.json` montre une exécution structurée avec qwen2.5:7b, mais contient encore une confusion sur une baisse de précision non mesurée; elle est à critiquer aussi. Le modèle 7b peut être choisi avec `OLLAMA_MODEL=qwen2.5:7b` après téléchargement; il exige davantage de mémoire.

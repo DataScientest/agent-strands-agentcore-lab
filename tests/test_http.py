@@ -1,10 +1,12 @@
 from fastapi.testclient import TestClient
-import server
+
+from incident_lab import runner, server
 
 
 def test_health_and_invalid_request_do_not_invoke_model(monkeypatch):
     def unexpected(*args, **kwargs):
         raise AssertionError("Model must not run")
+
     monkeypatch.setattr(server, "invoke", unexpected)
     c = TestClient(server.app)
     assert c.get("/ping").json() == {"status": "Healthy"}
@@ -14,9 +16,11 @@ def test_health_and_invalid_request_do_not_invoke_model(monkeypatch):
 
 def test_http_invocation_has_new_request_and_fixed_tenant(monkeypatch):
     calls = []
+
     def fake(incident, mode, tenant):
         calls.append((incident, mode, tenant))
         return {"ok": True, "report": {"incident_id": incident}}
+
     monkeypatch.setattr(server, "invoke", fake)
     c = TestClient(server.app)
     for incident in ["INC-001", "INC-002"]:
@@ -26,8 +30,9 @@ def test_http_invocation_has_new_request_and_fixed_tenant(monkeypatch):
 
 def test_timeout_terminates_worker(monkeypatch):
     import subprocess
-    import runner
+
     def expired(*args, **kwargs):
         raise subprocess.TimeoutExpired(args[0], kwargs["timeout"])
+
     monkeypatch.setattr(runner.subprocess, "run", expired)
     assert runner.invoke("INC-001", timeout=1)["error"] == "TIMEOUT"

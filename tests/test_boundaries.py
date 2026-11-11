@@ -1,13 +1,19 @@
-import sqlite3
 import pytest
-from domain import Budget, BudgetExceeded, Finding, Investigation, Report
-from actions import approve, connect, execute, propose
+
+from incident_lab.actions import approve, connect, execute, propose
+from incident_lab.contracts import Finding, Report
+from incident_lab.domain import Budget, BudgetExceeded, Investigation
 
 
 def report(incident="INC-001", ids=None):
-    return Report(incident_id=incident, status="hypothesis", findings=[Finding(
-        hypothesis="Dérive possible", evidence_ids=ids or ["E-101"], limitation="Sans labels")],
-        unknowns=["Qualité réelle"], proposed_action="Inspecter caméra", requires_human_approval=True)
+    return Report(
+        incident_id=incident,
+        status="hypothesis",
+        findings=[Finding(hypothesis="Dérive possible", evidence_ids=ids or ["E-101"], limitation="Sans labels")],
+        unknowns=["Qualité réelle"],
+        proposed_action="Inspecter caméra",
+        requires_human_approval=True,
+    )
 
 
 def test_cross_tenant_and_cross_incident_are_not_found():
@@ -67,14 +73,18 @@ def test_approval_is_bound_to_content_and_execution_is_idempotent(tmp_path):
 
 def test_report_cannot_disable_approval():
     from pydantic import ValidationError
+
     with pytest.raises(ValidationError):
         Report(**{**report().model_dump(), "requires_human_approval": False})
 
 
 def test_injection_is_only_data_and_no_action_tool_is_exposed():
-    from agent import make_agent
-    from strands.models import Model
     from unittest.mock import Mock
+
+    from strands.models import Model
+
+    from incident_lab.agent import make_agent
+
     state = Investigation("INC-004")
     assert "ignore" in state.read_evidence("E-401")["facts"]
     agent = make_agent(state, Mock(spec=Model))
@@ -82,34 +92,65 @@ def test_injection_is_only_data_and_no_action_tool_is_exposed():
 
 
 def test_gateway_must_be_https_and_never_falls_back(monkeypatch):
-    from models import gateway_model as lab_model
     from strands.models.openai import OpenAIModel
+
+    from incident_lab.models import build_model
+
     monkeypatch.setenv("LLM_API_KEY", "sk-test")
     monkeypatch.setenv("LLM_BASE_URL", "http://example.com/v1")
     with pytest.raises(ValueError, match="https"):
-        lab_model()
+        build_model()
     monkeypatch.setenv("LLM_BASE_URL", "https://gateway.example/v1")
-    assert isinstance(lab_model(), OpenAIModel)
+    assert isinstance(build_model(), OpenAIModel)
 
 
 def test_remote_ollama_host_and_remote_model_are_refused(monkeypatch):
-    from agent import local_model
-    monkeypatch.delenv("LLM_API_KEY", raising=False)
+    from incident_lab.models import build_model
+
+    monkeypatch.setenv("LLM_API_KEY", "")
     monkeypatch.setenv("OLLAMA_HOST", "https://example.com")
     with pytest.raises(ValueError, match="local"):
-        local_model()
+        build_model()
     monkeypatch.setenv("OLLAMA_HOST", "http://127.0.0.1:11434")
     monkeypatch.setenv("OLLAMA_MODEL", "qwen2.5:3b")
+
     class Response:
-        def raise_for_status(self): return self
-        def json(self): return {"models": [{"name": "qwen2.5:3b", "remote_host": "https://example.com"}]}
-    monkeypatch.setattr("agent.httpx.get", lambda *args, **kwargs: Response())
+        def raise_for_status(self):
+            return self
+
+        def json(self):
+            return {"models": [{"name": "qwen2.5:3b", "remote_host": "https://example.com"}]}
+
+    monkeypatch.setattr("incident_lab.models.httpx.get", lambda *args, **kwargs: Response())
     with pytest.raises(ValueError, match="cloud"):
-        local_model()
+        build_model()
 
 
 def test_floci_client_cannot_fall_back_to_aws(monkeypatch):
-    from floci_lab import client
+    from incident_lab.floci import client
+
     monkeypatch.setenv("FLOCI_ENDPOINT", "https://bedrock-agentcore.eu-west-3.amazonaws.com")
     with pytest.raises(ValueError, match="local"):
         client("bedrock-agentcore")
+
+
+def test_settings_come_from_the_environment_and_the_key_stays_secret(monkeypatch):
+    from incident_lab.config import settings
+    from incident_lab.models import model_name
+
+    monkeypatch.setenv("LLM_API_KEY", "sk-secret")
+    monkeypatch.setenv("LLM_MODEL", "un-modele")
+    assert settings().uses_gateway and model_name() == "un-modele"
+    assert "sk-secret" not in repr(settings())
+    monkeypatch.setenv("LLM_API_KEY", "")
+    assert model_name() == "qwen2.5:3b"
+
+
+def test_an_unknown_prompt_variant_is_refused(monkeypatch):
+    from incident_lab.agent import system_prompt
+
+    monkeypatch.setenv("AGENT_VARIANT", "hardened")
+    assert "PREDITS" in system_prompt()
+    monkeypatch.setenv("AGENT_VARIANT", "autre")
+    with pytest.raises(ValueError, match="baseline ou hardened"):
+        system_prompt()

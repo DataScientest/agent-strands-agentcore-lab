@@ -1,10 +1,13 @@
 .venv/
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 runs/
 *.sqlite3
 .env
 
 premiere-enquete.json
 enquete-multi.json
+enquete-unique.json
 runs-premiere-enquete.json
+sorties/

@@ -1,15 +1,18 @@
-"""Contrats et accès métier : aucun accès AWS, shell ou réseau dans les outils."""
+"""Accès métier et budgets : aucun accès AWS, shell ou réseau dans les outils."""
+
 import json
 import time
 from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from importlib.resources import files
 
-DATA = json.loads(Path(__file__).with_name("incidents.json").read_text())
+from incident_lab.contracts import Report
+
+DATA = json.loads(files("incident_lab").joinpath("data/incidents.json").read_text(encoding="utf-8"))
+
 
 class BudgetExceeded(RuntimeError):
     pass
+
 
 @dataclass
 class Budget:
@@ -19,6 +22,7 @@ class Budget:
     tools: int = 0
     started: float = field(default_factory=time.monotonic)
     events: list = field(default_factory=list)
+    usage: dict | None = None
 
     def model_call(self):
         self.models += 1
@@ -30,20 +34,6 @@ class Budget:
         if self.tools > self.max_tools:
             raise BudgetExceeded("Budget global d'appels outils atteint")
 
-class Finding(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    hypothesis: str
-    evidence_ids: list[str] = Field(min_length=1)
-    limitation: str
-
-class Report(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    incident_id: str
-    status: Literal["hypothesis", "insufficient_evidence"]
-    findings: list[Finding]
-    unknowns: list[str] = Field(min_length=1)
-    proposed_action: str
-    requires_human_approval: Literal[True]
 
 @dataclass
 class Investigation:
@@ -69,17 +59,18 @@ class Investigation:
         incident = self._incident()
         result = {"error": "NOT_FOUND", "retryable": False}
         if incident:
-            result = {"incident_id": self.incident_id, "summary": incident["summary"],
-                      "evidence_ids": [e["id"] for e in incident["evidence"]
-                                       if e["kind"] in self.allowed_kinds]}
+            result = {
+                "incident_id": self.incident_id,
+                "summary": incident["summary"],
+                "evidence_ids": [e["id"] for e in incident["evidence"] if e["kind"] in self.allowed_kinds],
+            }
         return self._record("get_incident", {}, result)
 
     def read_evidence(self, evidence_id):
         self.budget.tool_call()
         incident = self._incident()
         items = incident["evidence"] if incident else []
-        e = next((e for e in items if e["id"] == evidence_id
-                  and e["kind"] in self.allowed_kinds), None)
+        e = next((e for e in items if e["id"] == evidence_id and e["kind"] in self.allowed_kinds), None)
         args = {"evidence_id": evidence_id}
         if e is None:
             return self._record("read_evidence", args, {"error": "NOT_FOUND", "retryable": False})
@@ -91,7 +82,7 @@ class Investigation:
         result = {k: v for k, v in e.items() if k != "fail_once"}
         return self._record("read_evidence", args, result)
 
-    def validate_report(self, report):
+    def validate_report(self, report: Report) -> Report:
         if report.incident_id != self.incident_id:
             raise ValueError("INCIDENT_MISMATCH")
         cited = {e for finding in report.findings for e in finding.evidence_ids}

@@ -1,12 +1,39 @@
 [project]
-name = "strands-agentcore-local-lab"
-version = "0.1.0"
+name = "incident-lab"
+version = "0.2.0"
+description = "Lab du parcours Strands et AgentCore : un agent d'enquête borné par le code"
+readme = "README.md"
 requires-python = ">=3.12,<3.14"
-dependencies = ["strands-agents[ollama,openai]", "boto3", "fastapi", "uvicorn", "httpx", "pydantic"]
+dependencies = [
+    "boto3",
+    "fastapi",
+    "httpx",
+    "pydantic",
+    "pydantic-settings",
+    "strands-agents[ollama,openai]",
+    "uvicorn",
+]
+
+[project.scripts]
+lab-run = "incident_lab.runner:main"          # une enquête, bornée par un délai
+lab-worker = "incident_lab.worker:main"       # une enquête, sans délai (lancée par lab-run)
+lab-evaluate = "incident_lab.evaluate:main"   # le même jeu rejoué et noté
+lab-serve = "incident_lab.server:main"        # le contrat HTTP d'AgentCore, en local
+lab-floci = "incident_lab.floci:main"         # le plan de contrôle AgentCore émulé par Floci
+lab-actions = "incident_lab.actions:main"     # approbation humaine d'une action simulée
+
+[build-system]
+requires = ["uv_build>=0.11,<0.12"]
+build-backend = "uv_build"
 
 [dependency-groups]
-dev = ["pytest"]
+dev = ["pytest", "ruff"]
 
 [tool.pytest.ini_options]
-pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]

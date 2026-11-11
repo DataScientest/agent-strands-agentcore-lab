@@ -1,29 +1,38 @@
 """Approbation hors agent, liée au contenu exact; SQLite garantit l'idempotence locale."""
+
 import hashlib
 import json
 import sqlite3
+from pathlib import Path
+
+ALLOWED = {"request_labels", "inspect_camera", "compare_versions"}
 
 
-def digest(action):
+def digest(action: dict) -> str:
     return hashlib.sha256(json.dumps(action, sort_keys=True, separators=(",", ":")).encode()).hexdigest()
 
 
-def connect(path):
+def connect(path: str | Path) -> sqlite3.Connection:
     db = sqlite3.connect(path)
-    db.execute("CREATE TABLE IF NOT EXISTS proposals (id TEXT PRIMARY KEY, payload TEXT, approved INTEGER DEFAULT 0, executed INTEGER DEFAULT 0)")
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS proposals "
+        "(id TEXT PRIMARY KEY, payload TEXT, approved INTEGER DEFAULT 0, executed INTEGER DEFAULT 0)"
+    )
     return db
 
 
-def propose(db, action):
-    if action.get("kind") not in {"request_labels", "inspect_camera", "compare_versions"}:
+def propose(db: sqlite3.Connection, action: dict) -> str:
+    if action.get("kind") not in ALLOWED:
         raise ValueError("ACTION_NOT_ALLOWED")
     pid = digest(action)
     with db:
-        db.execute("INSERT OR IGNORE INTO proposals(id, payload) VALUES (?, ?)", (pid, json.dumps(action, sort_keys=True)))
+        db.execute(
+            "INSERT OR IGNORE INTO proposals(id, payload) VALUES (?, ?)", (pid, json.dumps(action, sort_keys=True))
+        )
     return pid
 
 
-def approve(db, pid, reviewed_action):
+def approve(db: sqlite3.Connection, pid: str, reviewed_action: dict) -> None:
     if digest(reviewed_action) != pid:
         raise ValueError("STALE_APPROVAL")
     with db:
@@ -31,7 +40,7 @@ def approve(db, pid, reviewed_action):
             raise ValueError("UNKNOWN_PROPOSAL")
 
 
-def execute(db, pid):
+def execute(db: sqlite3.Connection, pid: str) -> dict:
     with db:
         row = db.execute("SELECT approved, executed FROM proposals WHERE id=?", (pid,)).fetchone()
         if row is None or not row[0]:
@@ -40,7 +49,7 @@ def execute(db, pid):
     return {"id": pid, "result": "SIMULATED_ACTION" if changed else "ALREADY_EXECUTED"}
 
 
-if __name__ == "__main__":
+def main() -> None:
     db = connect("actions.sqlite3")
     action = {"incident_id": "INC-001", "kind": "inspect_camera"}
     pid = propose(db, action)
@@ -50,3 +59,7 @@ if __name__ == "__main__":
         approve(db, pid, action)
         print(execute(db, pid))
         print(execute(db, pid))
+
+
+if __name__ == "__main__":
+    main()

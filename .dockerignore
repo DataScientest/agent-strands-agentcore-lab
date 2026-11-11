@@ -1,6 +1,10 @@
 .venv
 runs
-__pycache__
+**/__pycache__
 .pytest_cache
+.ruff_cache
 *.sqlite3
+.env
 tests
+references
+data
